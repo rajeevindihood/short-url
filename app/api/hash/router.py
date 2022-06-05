@@ -1,8 +1,8 @@
 from cgitb import reset
 import logging
+from sqlite3 import IntegrityError
 from urllib import request
 
-from sqlalchemy.sql.elements import and_
 logger= logging.getLogger(__file__)
 
 from fastapi import APIRouter, Depends, HTTPException, Request, params, status, Query, Request, Form
@@ -10,11 +10,9 @@ from fastapi.responses import RedirectResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from app.core.db_config import get_db
 from app.models import model
-router = APIRouter(prefix="/hash", tags=["Hash"])
+
 
 import hashlib
-
-from datetime import datetime
 
 import json
 
@@ -31,6 +29,8 @@ import os
 from app.models.model import Hash
 
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
+router = APIRouter(prefix="/v1", tags=["Hash"], dependencies=[Depends(JWTBearer())])
 
 def generateHash(s, char_length=8):
     """Geneate hexadecimal string with given length from a string
@@ -53,20 +53,18 @@ def get_random_string(request:Request, hash: str, db_session: Session=Depends(ge
         if not hashQuery:
             logger.error("Hash not found for :{}".format(hash))
             raise HTTPException(status_code=404, detail="Hash not found for :{}".format(hash))
-        return hashQuery.original_key
+        return RedirectResponse(hashQuery.original_key)
 
     except Exception as e:
         print(e)
         raise HTTPException(e)
 
-@router.post("/hashing")
+@router.post("/")
 async def send_zeropay_payment_request(request: Request, db_session:Session=Depends(get_db)):
     try:
         body = await request.body()
-        print(body)
         response = json.loads(body.decode('utf-8'))
         hash_key = generateHash(response["text"])
-        print(hash_key)
         hashObj = Hash(hash_key= hash_key, original_key= response["text"])
         db_session.add(hashObj)
         db_session.flush()
@@ -74,4 +72,10 @@ async def send_zeropay_payment_request(request: Request, db_session:Session=Depe
         return hash_key
     except Exception as e:
         print(e)
-        raise HTTPException(e)
+        return hash_key
+    finally:
+        raise HTTPException(status_code=409, detail="Duplicate key")
+    
+    
+        
+    

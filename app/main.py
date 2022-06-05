@@ -8,9 +8,21 @@ from app.core.dbpool import dbHdlr
 logging.config.fileConfig("./app/logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
-from app.api.hash import router as hashRouter
+from app.api.auth.router import router as auth_router
+from app.api.hash.router import router as hashRouter
 
 app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
+
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_origin_regex="https://.*\.icanpe\.com",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    
+)
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
@@ -20,6 +32,7 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
+app.include_router(auth_router)
 app.include_router(hashRouter)
 
 @app.on_event("startup")
