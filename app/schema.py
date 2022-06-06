@@ -15,3 +15,7 @@ class HashModel(BaseModel):
 #     last_visiting_time TIMESTAMP,
 #     UNIQUE(hash_key, original_key)
 # );
+
+# ALTER TABLE hash_keys 
+# ADD COLUMN is_enabled boolean default true, 
+# ADD COLUMN expiry_date timestamp;
