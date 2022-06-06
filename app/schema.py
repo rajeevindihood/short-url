@@ -4,8 +4,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 class HashModel(BaseModel):
-    original_key: str
-    hash_key:str
+    url: str
 
 # CREATE TABLE hash_keys (
 # 	id SERIAL  PRIMARY KEY,

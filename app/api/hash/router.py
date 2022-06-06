@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from app.core.db_config import get_db
 from app.models import model
+from app.schema import HashModel
 
 
 import hashlib
@@ -49,7 +50,6 @@ def get_random_string(request:Request, hash: str, db_session: Session=Depends(ge
         hashQuery = db_session.query(model.Hash).filter(model.Hash.hash_key == hash, model.Hash.expiry_date >= datetime.now(tz=ZoneInfo('Asia/Kolkata'))).first()
         print(hashQuery)
         if not hashQuery:
-            db_session.flush()
             hashQuery2 = db_session.query(model.Hash).filter(model.Hash.hash_key == hash).first()
             if not hashQuery2:
                 logger.error("Hash not found for :{}".format(hash))
@@ -67,21 +67,18 @@ def get_random_string(request:Request, hash: str, db_session: Session=Depends(ge
         return RedirectResponse(hashQuery.original_key)
 
     except Exception as e:
-        # logger.error("Exception: ", e)
-        return HTTPException(status_code=404, detail="No such keys found")
+        logger.error("Exception: ", e)
+        raise HTTPException(status_code=404, detail="No such keys found")
 
 @router.post("/", dependencies=[Depends(JWTBearer())])
-async def save_url(request: Request, db_session:Session=Depends(get_db)):
+async def save_url(request: Request, eventValue: HashModel, db_session:Session=Depends(get_db)):
     try:
         body = await request.body()
         response = json.loads(body.decode('utf-8'))
-        hash_key = generateHash(response["text"])
-        # expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
-        # expiry_date = expiry_date - timedelta(days=expiry_date.day)
-        expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')) + timedelta(seconds=10)
-        print(expiry_date)
-        print(datetime.now(tz=ZoneInfo('Asia/Kolkata')))
-        hashObj = Hash(hash_key= hash_key, original_key= response["text"], creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
+        hash_key = generateHash(response["url"])
+        expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
+        expiry_date = expiry_date - timedelta(days=expiry_date.day)
+        hashObj = Hash(hash_key= hash_key, original_key= response["url"], creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
         db_session.add(hashObj)
         db_session.flush()
         db_session.commit()
