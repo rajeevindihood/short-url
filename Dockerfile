@@ -33,3 +33,9 @@ ADD https://github.com/ufoscout/docker-compose-wait/releases/download/$WAIT_VERS
 RUN chmod +x /wait
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000","--env-file", "/app/prod.env"]
+
+
+
+
+
+
