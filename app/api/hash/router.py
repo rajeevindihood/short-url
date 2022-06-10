@@ -16,10 +16,10 @@ import hashlib
 
 import json
 
-try:
-    from zoneinfo import ZoneInfo
-except:
-    from backports.zoneinfo import ZoneInfo
+# try:
+#     from zoneinfo import ZoneInfo
+# except:
+#     from backports.zoneinfo import ZoneInfo
 
 from app.middleware.authorizer import JWTBearer
 
@@ -92,38 +92,40 @@ async def save_url(request: Request, db_session:Session=Depends(get_db)):
         return hash_key
     
     
+
+from app.core.db_config import async_database, get_db, engine
+
 @router.post("/create-short-url/bulk/{tranch_id}")
-async def save_url(request: Request, tranch_id:int, db_session:Session=Depends(get_db)):
-    try:
-        body = await request.body()
-        response = json.loads(body.decode('utf-8'))
-        df=pd.DataFrame(response)
-        #print(df)
-        df['short_url']=df.apply(generateHash(df['url']))
-        print(df['short_url'])        
-        expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
-        expiry_date = expiry_date - timedelta(days=expiry_date.day)
-    except Exception as e:
-        logger.info("Exception: ", e)
-              
-        
-    for key, val in response.items():
-        try:
-            hashVal = generateHash(val)
-            hash_obj = db_session.query(model.Hash).filter(model.Hash.hash_key == hashVal).first()
-            if not hash_obj:
-                hashObj = Hash(hash_key= hashVal, original_key= val, tranch_id=tranch_id, creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
-                db_session.add(hashObj)
-                db_session.flush()
+async def bulk_save_url(request: Request, tranch_id:int, db_session:Session=Depends(get_db)):
 
 
-                
-        except Exception as e:
-            continue
-    db_session.commit()
-    return 
-  
-    
-    
-        
-    
+
+    all_borrs = db_session.query(model.Borrower).filter(model.Borrower.tranch_id==tranch_id)
+    Tranch = db_session.query(model.Tranch).filter(model.Tranch.id==tranch_id).first()
+    Client = db_session.query(model.Client).filter(model.Client.id==Tranch.client_id).first()
+
+    print(all_borrs)
+
+    expiry_date = datetime.now(tz=None).replace(day=28) + timedelta(days=4) 
+    expiry_date = expiry_date - timedelta(days=expiry_date.day)
+
+    for each in all_borrs:
+        print(each)
+        journey_url = "https://{host}/loan-repay/{canpebid}".format(host=Client.domain,canpebid=each.canpebid)
+        hashVal = generateHash(journey_url)
+        print(hashVal)
+
+        hash_obj = db_session.query(model.Hash).filter(model.Hash.hash_key == hashVal).first()
+        if not hash_obj:
+            print("No existing Url found for {}".format(each.opportunity_name))
+            hashObj = Hash(hash_key= hashVal, original_key= journey_url, tranch_id=tranch_id, creation_date=datetime.now(tz=None), expiry_date=expiry_date)
+            each.sms_short_link = "https://api-staging.icanpe.com/short-url/{}".format(hashVal)
+            print(each.sms_short_link) 
+            db_session.add(hashObj)
+            db_session.flush()
+            db_session.commit()
+
+        else:
+            print("existing Url found for {} - {}".format(each.opportunity_name, each.sms_short_link))
+
+    return
