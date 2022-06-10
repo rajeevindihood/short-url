@@ -97,24 +97,32 @@ async def save_url(request: Request, tranch_id:int, db_session:Session=Depends(g
     try:
         body = await request.body()
         response = json.loads(body.decode('utf-8'))
+        df=pd.DataFrame(response)
+        #print(df)
+        df['short_url']=df.apply(generateHash(df['url']))
+        print(df['short_url'])        
         expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
         expiry_date = expiry_date - timedelta(days=expiry_date.day)
-        
-        for key, val in response.items():
-            try:
-                hashVal = generateHash(val) 
-                hashObj = Hash(hash_key= hashVal, original_key= val, tranch_id=tranch_id, creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
-                db_session.add(hashObj)
-                
-            except Exception as e:
-                print("Exeption: ", e)
-                continue
-        db_session.flush()
-        db_session.commit()
-        return 
     except Exception as e:
         logger.info("Exception: ", e)
-        return 
+              
+        
+    for key, val in response.items():
+        try:
+            hashVal = generateHash(val)
+            hash_obj = db_session.query(model.Hash).filter(model.Hash.hash_key == hashVal).first()
+            if not hash_obj:
+                hashObj = Hash(hash_key= hashVal, original_key= val, tranch_id=tranch_id, creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
+                db_session.add(hashObj)
+                db_session.flush()
+
+
+                
+        except Exception as e:
+            continue
+    db_session.commit()
+    return 
+  
     
     
         
