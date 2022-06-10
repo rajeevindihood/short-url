@@ -1,7 +1,6 @@
 from cgitb import reset
+from datetime import datetime, timedelta
 import logging
-from sqlite3 import IntegrityError
-from urllib import request
 
 logger= logging.getLogger(__file__)
 
@@ -10,6 +9,7 @@ from fastapi.responses import RedirectResponse, PlainTextResponse
 from sqlalchemy.orm import Session
 from app.core.db_config import get_db
 from app.models import model
+from app.schema import HashModel
 
 
 import hashlib
@@ -20,11 +20,9 @@ try:
     from zoneinfo import ZoneInfo
 except:
     from backports.zoneinfo import ZoneInfo
-from urllib.parse import unquote, quote_plus, urlencode,urlparse, parse_qs
 
 from app.middleware.authorizer import JWTBearer
 
-import requests
 import os
 from app.models.model import Hash
 
@@ -49,32 +47,46 @@ def generateHash(s, char_length=8):
 def get_random_string(request:Request, hash: str, db_session: Session=Depends(get_db)):
     """Returns a  string of length string_length."""
     try:
-        hashQuery = db_session.query(model.Hash).filter(model.Hash.hash_key == hash).first()
+        hashQuery = db_session.query(model.Hash).filter(model.Hash.hash_key == hash, model.Hash.expiry_date >= datetime.now(tz=ZoneInfo('Asia/Kolkata'))).first()
+        print(hashQuery)
         if not hashQuery:
-            logger.error("Hash not found for :{}".format(hash))
-            raise HTTPException(status_code=404, detail="Hash not found for :{}".format(hash))
+            hashQuery2 = db_session.query(model.Hash).filter(model.Hash.hash_key == hash).first()
+            if not hashQuery2:
+                logger.error("Hash not found for :{}".format(hash))
+                return HTTPException(status_code=404, detail="Hash not found for :{}".format(hash))
+            else:
+                hashQuery2.is_enabled = False
+                db_session.flush()
+                logger.error("The link has already expired")
+                return HTTPException(status_code=410, detail="The link has expired")
+        
+        visitingTime = datetime.now(tz=ZoneInfo('Asia/Kolkata'))
+        
+        hashQuery.last_visiting_time = visitingTime
+        db_session.commit()
         return RedirectResponse(hashQuery.original_key)
 
     except Exception as e:
-        print(e)
-        raise HTTPException(e)
+        logger.error("Exception: ", e)
+        raise HTTPException(status_code=404, detail="No such keys found")
 
-@router.post("/")
-async def send_zeropay_payment_request(request: Request, db_session:Session=Depends(get_db)):
+@router.post("/", dependencies=[Depends(JWTBearer())])
+async def save_url(request: Request, eventValue: HashModel, db_session:Session=Depends(get_db)):
     try:
         body = await request.body()
         response = json.loads(body.decode('utf-8'))
-        hash_key = generateHash(response["text"])
-        hashObj = Hash(hash_key= hash_key, original_key= response["text"])
+        hash_key = generateHash(response["url"])
+        expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
+        expiry_date = expiry_date - timedelta(days=expiry_date.day)
+        hashObj = Hash(hash_key= hash_key, original_key= response["url"], creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
         db_session.add(hashObj)
         db_session.flush()
         db_session.commit()
         return hash_key
     except Exception as e:
-        print(e)
+        logger.info("Exception: ", e)
         return hash_key
-    finally:
-        raise HTTPException(status_code=409, detail="Duplicate key")
+    
     
     
         

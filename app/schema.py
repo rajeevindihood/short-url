@@ -4,8 +4,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 class HashModel(BaseModel):
-    original_key: str
-    hash_key:str
+    url: str
 
 # CREATE TABLE hash_keys (
 # 	id SERIAL  PRIMARY KEY,
@@ -15,3 +14,7 @@ class HashModel(BaseModel):
 #     last_visiting_time TIMESTAMP,
 #     UNIQUE(hash_key, original_key)
 # );
+
+# ALTER TABLE hash_keys 
+# ADD COLUMN is_enabled boolean default true, 
+# ADD COLUMN expiry_date timestamp;
