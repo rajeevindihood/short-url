@@ -28,8 +28,8 @@ from app.models.model import Hash
 
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-router = APIRouter(prefix="/v1", tags=["Hash"], dependencies=[Depends(JWTBearer())])
-
+router = APIRouter(prefix="/v1", tags=["Hash"] )
+# dependencies=[Depends(JWTBearer())]
 def generateHash(s, char_length=8):
     """Geneate hexadecimal string with given length from a string
     
@@ -69,8 +69,9 @@ def get_random_string(request:Request, hash: str, db_session: Session=Depends(ge
     except Exception as e:
         logger.error("Exception: ", e)
         raise HTTPException(status_code=404, detail="No such keys found")
+# , dependencies=[Depends(JWTBearer())]
 
-@router.post("/", dependencies=[Depends(JWTBearer())])
+@router.post("/create-short-url")
 async def save_url(request: Request, eventValue: HashModel, db_session:Session=Depends(get_db)):
     try:
         body = await request.body()
