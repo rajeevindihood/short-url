@@ -4,7 +4,8 @@ from sqlalchemy import (
     Integer,
     String,
     DateTime,
-    Boolean
+    Boolean,
+    ForeignKey,
 )
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -18,6 +19,7 @@ class Hash(Base):
     creation_date=Column(DateTime(),server_default=func.now(), default=func.now())
     last_visiting_time=Column(DateTime())
     is_enabled = Column(Boolean, default=True)
+    tranch_id = Column(Integer(),ForeignKey(column="journey_tranch.id"))
     expiry_date=Column(DateTime())
     
     def as_dict(self):

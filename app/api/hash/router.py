@@ -26,6 +26,8 @@ from app.middleware.authorizer import JWTBearer
 import os
 from app.models.model import Hash
 
+import pandas as pd
+
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 router = APIRouter(prefix="/v1", tags=["Hash"] )
@@ -72,7 +74,7 @@ def get_random_string(request:Request, hash: str, db_session: Session=Depends(ge
 # , dependencies=[Depends(JWTBearer())]
 
 @router.post("/create-short-url")
-async def save_url(request: Request, eventValue: HashModel, db_session:Session=Depends(get_db)):
+async def save_url(request: Request, db_session:Session=Depends(get_db)):
     try:
         body = await request.body()
         response = json.loads(body.decode('utf-8'))
@@ -83,11 +85,36 @@ async def save_url(request: Request, eventValue: HashModel, db_session:Session=D
         db_session.add(hashObj)
         db_session.flush()
         db_session.commit()
-        return hash_key
+        return hashObj.hash_key
+
     except Exception as e:
         logger.info("Exception: ", e)
         return hash_key
     
+    
+@router.post("/create-short-url/bulk/{tranch_id}")
+async def save_url(request: Request, tranch_id:int, db_session:Session=Depends(get_db)):
+    try:
+        body = await request.body()
+        response = json.loads(body.decode('utf-8'))
+        expiry_date = datetime.now(tz=ZoneInfo('Asia/Kolkata')).replace(day=28) + timedelta(days=4) 
+        expiry_date = expiry_date - timedelta(days=expiry_date.day)
+        
+        for key, val in response.items():
+            try:
+                hashVal = generateHash(val) 
+                hashObj = Hash(hash_key= hashVal, original_key= val, tranch_id=tranch_id, creation_date=datetime.now(tz=ZoneInfo('Asia/Kolkata')), expiry_date=expiry_date)
+                db_session.add(hashObj)
+                
+            except Exception as e:
+                print("Exeption: ", e)
+                continue
+        db_session.flush()
+        db_session.commit()
+        return 
+    except Exception as e:
+        logger.info("Exception: ", e)
+        return 
     
     
         
