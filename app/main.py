@@ -11,7 +11,18 @@ logger = logging.getLogger(__name__)
 from app.api.auth.router import router as auth_router
 from app.api.hash.router import router as hashRouter
 
-app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
+tags_metadata = [
+    {"name": "Get Methods", "description": "One other way around"},
+    {"name": "Post Methods", "description": "Keep doing this"},
+    {"name": "Delete Methods", "description": "KILL 'EM ALL"},
+    {"name": "Put Methods", "description": "Boring"},
+]
+
+
+# app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
+app = FastAPI(tags_metadata=tags_metadata, docs_url="/short-url/docs", openapi_url="/short-url/openapi.json", redoc_url="/short-url/redoc", title='short-url Data APIs', version="0.0.1")
+
+
 
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
@@ -32,8 +43,8 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
-app.include_router(auth_router)
-app.include_router(hashRouter)
+app.include_router(auth_router, prefix="/short-url")
+app.include_router(hashRouter, prefix="/short-url")
 
 @app.on_event("startup")
 async def on_startup():
