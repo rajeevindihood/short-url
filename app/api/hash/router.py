@@ -117,7 +117,7 @@ async def bulk_save_url(request: Request, tranch_id:int, db_session:Session=Depe
             print("No existing Url found for {}".format(each.opportunity_name))
             hashObj = Hash(hash_key= hashVal, original_key= journey_url, tranch_id=tranch_id, creation_date=datetime.now(tz=None), expiry_date=expiry_date)
             #each.sms_short_link = "https://api-staging.icanpe.com/short-url/{}".format(hashVal)
-            each.sms_short_link = "https://pay.icanpe.com/{}".format(hashVal)
+            each.sms_short_link = "https://api.icanpe.com/{}".format(hashVal)
 
             print(each.sms_short_link) 
             db_session.add(hashObj)
