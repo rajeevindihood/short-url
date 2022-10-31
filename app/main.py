@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 from app.api.auth.router import router as auth_router
 from app.api.hash.router import router as hashRouter
 
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://11196679ff594785800a4e26e90cf991@o4504014430142464.ingest.sentry.io/4504014436237312",
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production,
+    traces_sample_rate=1.0,
+)
+
+
 app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
 
 from fastapi.middleware.cors import CORSMiddleware
