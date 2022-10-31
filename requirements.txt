@@ -44,7 +44,7 @@ pika==1.2.0
 pipreqs==0.4.11
 pluggy==1.0.0
 premailer==3.10.0
-promise
+promise==2.3
 psycopg2-binarypy
 pyasn1==0.4.8
 pycparser==2.20
