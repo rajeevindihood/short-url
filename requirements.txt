@@ -45,8 +45,7 @@ pipreqs==0.4.11
 pluggy==1.0.0
 premailer==3.10.0
 promise==2.3
-psycopg2
-py==1.11.0
+psycopg2-binarypy==1.11.0
 pyasn1==0.4.8
 pycparser==2.20
 pydantic==1.8.2
