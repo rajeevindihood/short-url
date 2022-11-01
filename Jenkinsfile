@@ -9,6 +9,20 @@ pipeline {
             }
         }
         
+        stage('Version.txt'){
+            steps{
+                script{
+                    sh 'echo """Version: $(TAG)""" >> version.txt'
+                    sh 'echo """--------------------------------""" >> version.txt'
+                    sh 'echo """Build date: $(DATE)""" >> version.txt'
+                    sh 'echo """SHA1: $(SHA1)""" >> version.txt'
+                    sh 'echo """Branch: $(BRANCH)""" >> version.txt'
+                    sh 'echo """Code diff: Behind-Ahead --> $(DIFF)""" >> version.txt'
+                    sh 'echo """--------------------------------""" >> version.txt'
+                }
+            }
+        }
+        
         stage('Build docker Image'){
             steps{
                 script{
