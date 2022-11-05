@@ -26,7 +26,7 @@ pipeline {
         stage('Build docker Image'){
             steps{
                 script{
-                    sh 'docker build -t icanpe/short-url .'
+                    sh 'docker build -t icanpe/short-url:master- .'
                 }
             }
         }
@@ -37,7 +37,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'DockerHub-PWD', variable: 'dockerhubpwd')]) {
                         sh 'docker login -u icanpe -p ${dockerhubpwd}'
                     }
-                    sh 'docker push icanpe/short-url'
+                    sh 'docker push icanpe/short-url:master-'
                 }
             }
         }
