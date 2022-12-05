@@ -122,9 +122,10 @@ async def bulk_save_url(request: Request, tranch_id:int, db_session:Session=Depe
             print(each.sms_short_link) 
             db_session.add(hashObj)
             db_session.flush()
-            db_session.commit()
+            
 
         else:
             print("existing Url found for {} - {}".format(each.opportunity_name, each.sms_short_link))
 
+    db_session.commit()
     return True
