@@ -5,11 +5,27 @@ import time
 
 from app.core.dbpool import dbHdlr
 
+
 logging.config.fileConfig("./app/logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
 from app.api.auth.router import router as auth_router
 from app.api.hash.router import router as hashRouter
+
+import sentry_sdk
+import os
+
+if os.getenv("SENTRY_DSN"):
+
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production,
+        traces_sample_rate=1.0,
+)
+
 
 tags_metadata = [
     {"name": "Get Methods", "description": "One other way around"},
