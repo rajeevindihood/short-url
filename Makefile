@@ -16,30 +16,29 @@ version:
 	@echo """Code diff: Behind-Ahead --> $(DIFF)""" >> version.txt
 	@echo """--------------------------------""" >> version.txt
 
-build:
-	make clean
-	make version
+# build:
+# 	make clean
+# 	make version
 
-	@echo "=== building files ==="
-	python setup.py bdist_egg --exclude-source-files -k -b build/dist
+# 	@echo "=== building files ==="
+# 	python setup.py bdist_egg --exclude-source-files -k -b build/dist
 
-	cp -v requirements.txt build/dist/app
-	cp -v ./app/prod.env build/dist/app
-	cp -v ./app/logging.conf build/dist/app
-	mv version.txt build/dist/app
+# 	cp -v requirements.txt build/dist/app
+# 	cp -v ./app/prod.env build/dist/app
+# 	cp -v ./app/logging.conf build/dist/app
+# 	cp -rv ./app/api/report_templates build/dist/app/api/report_templates
+# 	mv version.txt build/dist/app
 
-clean:
-	@echo "=== removing old build dir ===="
-	# rm version.txt
-	rm -rf build
-	rm -rf dist
-	rm -rf *.egg-info
+# clean:
+# 	@echo "=== removing old build dir ===="
+# 	# rm version.txt
+# 	rm -rf build
+# 	rm -rf dist
+# 	rm -rf *.egg-info
 
 
 prod-image:
-	make build
+	make version
 	docker build -t icanpe/short-url:$(BRANCH)-$(TAG) .
 	docker push icanpe/short-url:$(BRANCH)-$(TAG)
-
-
-
+	rm version.txt

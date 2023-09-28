@@ -5,6 +5,7 @@ import time
 
 from app.core.dbpool import dbHdlr
 
+
 logging.config.fileConfig("./app/logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
@@ -12,18 +13,32 @@ from app.api.auth.router import router as auth_router
 from app.api.hash.router import router as hashRouter
 
 import sentry_sdk
+import os
 
-sentry_sdk.init(
-    dsn="https://11196679ff594785800a4e26e90cf991@o4504014430142464.ingest.sentry.io/4504014436237312",
+if os.getenv("SENTRY_DSN"):
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production,
-    traces_sample_rate=1.0,
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production,
+        traces_sample_rate=1.0,
 )
 
 
-app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
+tags_metadata = [
+    {"name": "Get Methods", "description": "One other way around"},
+    {"name": "Post Methods", "description": "Keep doing this"},
+    {"name": "Delete Methods", "description": "KILL 'EM ALL"},
+    {"name": "Put Methods", "description": "Boring"},
+]
+
+
+# app=FastAPI(docs_url="/short-url/docs",openapi_url="/short-url/openapi.json")
+app = FastAPI(tags_metadata=tags_metadata, docs_url="/short-url/docs", openapi_url="/short-url/openapi.json", redoc_url="/short-url/redoc", title='short-url Data APIs', version="0.0.1")
+
+
 
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(

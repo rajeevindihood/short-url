@@ -18,3 +18,7 @@ class HashModel(BaseModel):
 # ALTER TABLE hash_keys 
 # ADD COLUMN is_enabled boolean default true, 
 # ADD COLUMN expiry_date timestamp;
+# ADD CONSTRAINT FOREIGN KEY(tranch_id) REFERENCES journey_tranch(id)
+
+
+    # ADD CONSTRAINT FOREIGN KEY(tranch_id) REFERENCES two(id);
