@@ -2,17 +2,18 @@ import hashlib
 import os
 from datetime import datetime, timedelta
 from logging import getLogger
+from random import random
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.constants import TZ_IST
 from app.core.db_config import get_db
-from app.core.errors import ExpiredDataError, ResourceNotFoundError
+from app.core.errors import DuplicateDataError, ExpiredDataError, ResourceNotFoundError
 from app.models import Client, HashKey, Tranch
 from app.models.journey_borrower import Borrower
 
@@ -75,9 +76,15 @@ def redirect_to_original_url(hash: str, db_session: Session = Depends(get_db)):
 def save_url(
     url: str = Body(..., embed=True),
     expiry_date: Optional[datetime] = Body(None, embed=True),  # IST
+    add_salt: bool = Body(True, embed=True),
     db_session: Session = Depends(get_db),
 ):
-    hash_key = _generate_hash(url)
+    if add_salt:
+        value = url + f"{random()}"
+    else:
+        value = url
+
+    hash_key = _generate_hash(value)
 
     if not expiry_date:
         expiry_date = _get_end_of_month()
@@ -89,8 +96,11 @@ def save_url(
         expiry_date=expiry_date,
     )
 
-    db_session.add(obj)
-    db_session.commit()
+    try:
+        db_session.add(obj)
+        db_session.commit()
+    except IntegrityError as e:
+        raise DuplicateDataError(f"Duplicate entry for {url=}", e)
 
     return obj.hash_key
 

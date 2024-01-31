@@ -22,7 +22,6 @@ class GenericError(Exception):
 class ResourceNotFoundError(GenericError):
     """
     Raised when an expected resource is not found in db/cache/...
-
     Attributes:
         message: explanation of what resource is not found and for which query params
         resource_cls: the class of the resouce
@@ -58,4 +57,18 @@ class ExpiredDataError(GenericError):
 
     def __init__(self, message: str, err: Optional[pydantic.ValidationError] = None):
         super().__init__(message, "EXPIRED_DATA", 410)
+        self.err = err
+
+
+class DuplicateDataError(GenericError):
+    """
+    Raised when an resource creation request fails because a duplicate entry is found
+
+    Attributes:
+        message: public facing message
+        err: the underlying exception
+    """
+
+    def __init__(self, message: str, err: Optional[Any] = None):
+        super().__init__(message, "DUPLICATE_DATA", 409)
         self.err = err
