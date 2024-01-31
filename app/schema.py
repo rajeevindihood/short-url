@@ -1,10 +1,11 @@
-
 from __future__ import annotations
 
 from pydantic import BaseModel
 
+
 class HashModel(BaseModel):
     url: str
+
 
 # CREATE TABLE hash_keys (
 # 	id SERIAL  PRIMARY KEY,
@@ -15,10 +16,10 @@ class HashModel(BaseModel):
 #     UNIQUE(hash_key, original_key)
 # );
 
-# ALTER TABLE hash_keys 
-# ADD COLUMN is_enabled boolean default true, 
+# ALTER TABLE hash_keys
+# ADD COLUMN is_enabled boolean default true,
 # ADD COLUMN expiry_date timestamp;
 # ADD CONSTRAINT FOREIGN KEY(tranch_id) REFERENCES journey_tranch(id)
 
 
-    # ADD CONSTRAINT FOREIGN KEY(tranch_id) REFERENCES two(id);
+# ADD CONSTRAINT FOREIGN KEY(tranch_id) REFERENCES two(id);

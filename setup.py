@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-packages=find_packages()
+packages = find_packages()
 print(packages)
 setup(
     name="icanpe-short-url",
@@ -13,5 +13,5 @@ setup(
         "License :: Private",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.7',
+    python_requires=">=3.7",
 )

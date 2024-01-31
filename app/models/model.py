@@ -1,92 +1,94 @@
 from datetime import datetime
-from email.policy import default
 
-from importlib import import_module
-import enum
-from unittest.mock import DEFAULT
-
-from sqlalchemy.sql.functions import func
-from sqlalchemy.orm import relationship
 from sqlalchemy import (
+    BLOB,
+    FLOAT,
     Boolean,
     Column,
+    Date,
+    DateTime,
+    Enum,
     ForeignKey,
     Integer,
-    BigInteger,
     String,
-    DateTime,
-    Date,
-    Time,
     Text,
-    Sequence,
-    Enum,
-    JSON,
-    BLOB, FLOAT
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql.expression import false, true
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.functions import func
-from sqlalchemy.sql.schema import FetchedValue
-from sqlalchemy.sql.sqltypes import VARCHAR
+
 # from sqlalchemy.sql.sqltypes import BLOB, BOOLEAN, Float, JSON
 Base = declarative_base()
+
 
 class Client(Base):
     __tablename__ = "journey_client"
     id = Column(Integer(), primary_key=True)
-    name=Column(String(length=100))
-    domain=Column(String(length=100))
-    pg_type = Column(Enum('RAZORPAY','BILLDESK','NEFT','CASHFREE','DKGFS','APP-REDIRECT','SL-REDIRECT','ZP-REDIRECT'))
-    contact_name=Column(String(length=100))
-    contact_phone=Column(String(length=100))
-    contact_email=Column(String(length=100))
-    logo=Column(BLOB)
-    created_by=Column(String(length=100))
-    category=Column(Enum('NBFC','CC','BNPL'))
-    creation_date=Column(DateTime(),server_default=func.now())
-    last_update_time=Column(DateTime(),server_default=func.now())
-    
+    name = Column(String(length=100))
+    domain = Column(String(length=100))
+    pg_type = Column(
+        Enum(
+            "RAZORPAY",
+            "BILLDESK",
+            "NEFT",
+            "CASHFREE",
+            "DKGFS",
+            "APP-REDIRECT",
+            "SL-REDIRECT",
+            "ZP-REDIRECT",
+        )
+    )
+    contact_name = Column(String(length=100))
+    contact_phone = Column(String(length=100))
+    contact_email = Column(String(length=100))
+    logo = Column(BLOB)
+    created_by = Column(String(length=100))
+    category = Column(Enum("NBFC", "CC", "BNPL"))
+    creation_date = Column(DateTime(), server_default=func.now())
+    last_update_time = Column(DateTime(), server_default=func.now())
+
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class Tranch(Base):
     __tablename__ = "journey_tranch"
     id = Column(Integer(), primary_key=True)
     name = Column(String(length=64))
-    client_id = Column(Integer(), ForeignKey(column="journey_client.id", ondelete="CASCADE"))
-    created_on = Column(DateTime(),default=datetime.now())
-    campaign_type = Column(Enum('EMI','SETTLEMENT'))
+    client_id = Column(
+        Integer(), ForeignKey(column="journey_client.id", ondelete="CASCADE")
+    )
+    created_on = Column(DateTime(), default=datetime.now())
+    campaign_type = Column(Enum("EMI", "SETTLEMENT"))
     enable_emi_payment = Column(Boolean(), default=False)
     enable_emi_payment_date = Column(DateTime())
     enable_liveassist = Column(Boolean(), default=False)
-    is_gupshupenabled  = Column(Boolean(),default=False)
-    created_by=Column(String(length=30))
-
+    is_gupshupenabled = Column(Boolean(), default=False)
+    created_by = Column(String(length=30))
 
     # additional_features = Column(JSON)
-    client = relationship ("Client")
+    client = relationship("Client")
 
-    is_enabled = Column(Boolean, default=False) 
-    telecalling_strategy=Column(Text)
-
+    is_enabled = Column(Boolean, default=False)
+    telecalling_strategy = Column(Text)
 
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Hash(Base):
     __tablename__ = "hash_keys"
     id = Column(Integer(), primary_key=True)
-    original_key=Column(String(length=255), unique=True)
-    hash_key=Column(String(length=8), unique=True)
-    creation_date=Column(DateTime(),server_default=func.now(), default=func.now())
-    last_visiting_time=Column(DateTime())
+    original_key = Column(String(length=255), unique=True)
+    hash_key = Column(String(length=8), unique=True)
+    creation_date = Column(DateTime(), server_default=func.now(), default=func.now())
+    last_visiting_time = Column(DateTime())
     is_enabled = Column(Boolean, default=True)
-    tranch_id = Column(Integer(),ForeignKey(column="journey_tranch.id"))
-    expiry_date=Column(DateTime())
-    
+    tranch_id = Column(Integer(), ForeignKey(column="journey_tranch.id"))
+    expiry_date = Column(DateTime())
+
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Borrower(Base):
@@ -173,15 +175,15 @@ class Borrower(Base):
     dealer_contact_person_name = Column(String(length=120))
     # field_agency= Column(Integer(), ForeignKey(column="journey_fieldagency.id"), nullable=True)
 
-    op0_1_paid = Column(Boolean,default=False) # UNUSED
-    op1_1_paid = Column(Boolean,default=False) # UNUSED
-    
-    op2_1_paid = Column(Boolean,default=False) # UNUSED
-    op2_2_paid = Column(Boolean,default=False) # UNUSED
-    
-    op3_1_paid = Column(Boolean,default=False) # UNUSED
-    op3_2_paid = Column(Boolean,default=False) # UNUSED
-    op3_3_paid = Column(Boolean,default=False) # UNUSED
+    op0_1_paid = Column(Boolean, default=False)  # UNUSED
+    op1_1_paid = Column(Boolean, default=False)  # UNUSED
+
+    op2_1_paid = Column(Boolean, default=False)  # UNUSED
+    op2_2_paid = Column(Boolean, default=False)  # UNUSED
+
+    op3_1_paid = Column(Boolean, default=False)  # UNUSED
+    op3_2_paid = Column(Boolean, default=False)  # UNUSED
+    op3_3_paid = Column(Boolean, default=False)  # UNUSED
 
     op0_1_payment_link = Column(String(length=255))
     op1_1_payment_link = Column(String(length=255))
@@ -224,40 +226,40 @@ class Borrower(Base):
     user_ip = Column(String(length=30))
     coupon_redem_date = Column(DateTime())
 
-    tranch_id = Column(Integer(),ForeignKey(column="journey_tranch.id"))
+    tranch_id = Column(Integer(), ForeignKey(column="journey_tranch.id"))
     # cohort_id = Column (Integer() ,ForeignKey(column="journey_cohort.id", ondelete="CASCADE"),autoincrement=True )
     # campaign_id = Column (Integer() ,ForeignKey(column="journey_canpecampaign.id", ondelete="CASCADE"),autoincrement=True )
-    client_id = Column(Integer(),ForeignKey(column="journey_client.id"))
+    client_id = Column(Integer(), ForeignKey(column="journey_client.id"))
     upload_id = Column(String(length=30))
     do_not_sms = Column(Boolean(), default=False)
     send_email = Column(Boolean(), default=True)
     do_not_call = Column(Boolean(), default=False)
-    sms_short_link = Column(String(length=32),default=None)
+    sms_short_link = Column(String(length=32), default=None)
     call_priority = Column(FLOAT, default=0.0)
-    
-    emi_short_link = Column(String(length=32),default=None)
-    default_reason = Column(String(length=255),default=None)
-   
-    min_due_amount=Column(Integer())
-    stab_amount=Column(Integer())
-    rollback_by_three=Column(Integer())
-    rollback_by_one=Column(Integer())
-    rollback_by_two=Column(Integer())
+
+    emi_short_link = Column(String(length=32), default=None)
+    default_reason = Column(String(length=255), default=None)
+
+    min_due_amount = Column(Integer())
+    stab_amount = Column(Integer())
+    rollback_by_three = Column(Integer())
+    rollback_by_one = Column(Integer())
+    rollback_by_two = Column(Integer())
 
     do_not_sms_secondary_phone = Column(Boolean(), default=False)
     do_not_sms_tertiary_phone = Column(Boolean(), default=False)
 
-    total_outstanding_payment_link=Column(String(length=100))
-
+    total_outstanding_payment_link = Column(String(length=100))
 
     # applicable_offer1 = orm.relationship ("Offer" ,foreign_keys="[journey_borrower.c.applicable_offer1_id]" ,remote_side=None )
     # applicable_offer2 = orm.relationship ("Offer" ,foreign_keys="[journey_borrower.c.applicable_offer2_id]" ,remote_side=None )
     # applicable_offer3 = orm.relationship ("Offer" ,foreign_keys="[journey_borrower.c.applicable_offer3_id]" ,remote_side=None )
 
-    tranch = relationship ("Tranch")
+    tranch = relationship("Tranch")
+
     # cohort = orm.relationship ("Cohort" ,foreign_keys="[journey_borrower.c.cohort_id]" ,remote_side=None )
     # campaign = orm.relationship ("CanpeCampaign" ,foreign_keys="[journey_borrower.c.campaign_id]" ,remote_side=None )
     # client = orm.relationship ("Client" ,foreign_keys="[journey_borrower.c.client_id]" ,remote_side=None )
     # coupon = orm.relationship ("Coupon" ,secondary="journey_borrower_coupon" ,foreign_keys="[journey_borrower_coupon.c.borrower_id, journey_borrower_coupon.c.coupon_id]" ,remote_side=None )
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
