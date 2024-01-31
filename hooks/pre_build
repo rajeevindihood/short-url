@@ -1,0 +1,2 @@
+#!/bin/sh
+git describe HEAD --long > version.txt
