@@ -2,7 +2,6 @@ import os
 from logging import getLogger
 from threading import Lock
 
-import databases
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -47,7 +46,6 @@ DATABASE_URL2 = "postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST
     DATABASE_PORT=DATABASE_PORT,
     DATABASE_NAME=DATABASE_NAME,
 )
-async_database = databases.Database(DATABASE_URL2, min_size=5, max_size=20)
 engine = create_engine(
     DATABASE_URL,
     pool_recycle=3600,

@@ -7,9 +7,7 @@ import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.auth.router import router as auth_router
 from app.api.hash.router import router as hashRouter
-from app.core.dbpool import dbHdlr
 
 logging.config.fileConfig("./app/logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
@@ -45,15 +43,4 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-app.include_router(auth_router)
 app.include_router(hashRouter)
-
-
-@app.on_event("startup")
-async def on_startup():
-    dbHdlr()
-
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    dbHdlr().close()
