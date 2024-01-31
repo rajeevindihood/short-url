@@ -7,7 +7,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.hash.router import router as hashRouter
+from app.api.hash.router import router as hash_router
+from app.api.sys.router import router as sys_router
+from app.api.sys.router import get_server_version
 from app.core.errors import GenericError
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,7 @@ async def add_process_time_header(request: Request, call_next):
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     response.headers["Server-Timing"] = f"total;dur={process_time*1000}"
+    response.headers["X-Canpe-Service"] = f"short-url:{get_server_version()}"
     return response
 
 
@@ -53,4 +56,5 @@ async def generic_error_handler(request: Request, exc: GenericError):
     )
 
 
-app.include_router(hashRouter)
+app.include_router(hash_router)
+app.include_router(sys_router)
