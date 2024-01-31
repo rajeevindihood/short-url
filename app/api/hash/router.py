@@ -1,23 +1,19 @@
 import hashlib
+import os
 from datetime import datetime, timedelta
 from logging import getLogger
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
+from app.core.constants import TZ_IST
 from app.core.db_config import get_db
-from app.models import model
-
-# TODO: Use TZ_IST & TZ_UTC
-try:
-    from zoneinfo import ZoneInfo
-except (ImportError, ModuleNotFoundError):
-    from backports.zoneinfo import ZoneInfo
-
-import os
-
-from app.models.model import Hash
+from app.core.errors import ExpiredDataError, ResourceNotFoundError
+from app.models import Client, HashKey, Tranch
+from app.models.journey_borrower import Borrower
 
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -25,66 +21,21 @@ logger = getLogger(__file__)
 router = APIRouter(tags=["Hash"])
 
 
-# dependencies=[Depends(JWTBearer())]
-def generateHash(s, char_length=8):
+def _generate_hash(s, char_length=8):
     """Geneate hexadecimal string with given length from a string
 
-    >>> short_str("hello world", 8)
+    >>> _generate_hash("hello world", 8)
     '309ecc48'
     """
     if char_length > 128:
-        raise ValueError("char_length {} exceeds 128".format(char_length))
+        raise ValueError(f"{char_length=} exceeds 128")
     hash_object = hashlib.sha512(s.encode())
     hash_hex = hash_object.hexdigest()
     return hash_hex[0:char_length]
 
 
-@router.get("/{hash}")
-def get_random_string(
-    request: Request, hash: str, db_session: Session = Depends(get_db)
-):
-    """Returns a  string of length string_length."""
-    try:
-        hashQuery = (
-            db_session.query(model.Hash)
-            .filter(
-                model.Hash.hash_key == hash,
-                model.Hash.expiry_date >= datetime.now(tz=ZoneInfo("Asia/Kolkata")),
-            )
-            .first()
-        )
-        print(hashQuery)
-        if not hashQuery:
-            hashQuery2 = (
-                db_session.query(model.Hash).filter(model.Hash.hash_key == hash).first()
-            )
-            if not hashQuery2:
-                logger.error("Hash not found for :{}".format(hash))
-                return HTTPException(
-                    status_code=404, detail="Hash not found for :{}".format(hash)
-                )
-            else:
-                hashQuery2.is_enabled = False
-                db_session.flush()
-                logger.error("The link has already expired")
-                return HTTPException(status_code=410, detail="The link has expired")
-
-        visitingTime = datetime.now(tz=ZoneInfo("Asia/Kolkata"))
-
-        hashQuery.last_visiting_time = visitingTime
-        db_session.commit()
-        return RedirectResponse(hashQuery.original_key)
-
-    except Exception as e:
-        logger.error("Exception: ", e)
-        raise HTTPException(status_code=404, detail="No such keys found")
-
-
-# , dependencies=[Depends(JWTBearer())]
-
-
 def _get_end_of_month():
-    now = datetime.now(tz=ZoneInfo("Asia/Kolkata"))
+    now = datetime.now(tz=TZ_IST)
     eod = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     next_month = eod.replace(day=28) + timedelta(days=4)
@@ -92,76 +43,93 @@ def _get_end_of_month():
     return start_of_next_month
 
 
-@router.post("/create-short-url")
-async def save_url(
-    url: str = Body(..., embed=True), db_session: Session = Depends(get_db)
-):
+@router.get("/{hash}")
+def redirect_to_original_url(hash: str, db_session: Session = Depends(get_db)):
     try:
-        hash_key = generateHash(url)
-        expiry_date = _get_end_of_month()
-        hashObj = Hash(
-            hash_key=hash_key,
-            original_key=url,
-            creation_date=datetime.now(tz=ZoneInfo("Asia/Kolkata")),
-            expiry_date=expiry_date,
-        )  # type: ignore
-        db_session.add(hashObj)
-        db_session.flush()
+        obj = db_session.execute(
+            select(HashKey).where(HashKey.hash_key == hash).limit(1)
+        ).scalar_one()
+    except NoResultFound:
+        logger.exception(f"No record found for {hash=}")
+        raise ResourceNotFoundError(f"This link does not exist: {hash}", HashKey)
+
+    now = datetime.now(tz=TZ_IST).replace(tzinfo=None)
+
+    if obj.is_enabled and obj.expiry_date and obj.expiry_date < now:
+        obj.is_enabled = False
         db_session.commit()
-        return hashObj.hash_key
 
-    except Exception as e:
-        logger.info("Exception: ", e)
-        return hash_key
+    if not obj.is_enabled:
+        logger.exception(f"Record {hash=} has expired")
+        raise ExpiredDataError(f"This link has expired: {hash}")
+
+    obj.last_visiting_time = now
+
+    db_session.commit()
+
+    return RedirectResponse(obj.original_key)
 
 
+@router.post("/create-short-url")
+def save_url(url: str = Body(..., embed=True), db_session: Session = Depends(get_db)):
+    hash_key = _generate_hash(url)
+    expiry_date = _get_end_of_month()
+    obj = HashKey(
+        hash_key=hash_key,
+        original_key=url,
+        creation_date=datetime.now(tz=TZ_IST),
+        expiry_date=expiry_date,
+    )
+
+    db_session.add(obj)
+    db_session.commit()
+
+    return obj.hash_key
+
+
+# TODO: Deprecate
 @router.post("/create-short-url/bulk/{tranch_id}")
-async def bulk_save_url(
-    request: Request, tranch_id: int, db_session: Session = Depends(get_db)
-):
-    all_borrs = db_session.query(model.Borrower).filter(
-        model.Borrower.tranch_id == tranch_id
-    )
-    tranch = db_session.query(model.Tranch).filter(model.Tranch.id == tranch_id).first()
-    client = (
-        db_session.query(model.Client)
-        .filter(model.Client.id == tranch.client_id)
-        .first()
-    )
+def bulk_save_url(tranch_id: int, db_session: Session = Depends(get_db)):
+    tranch = db_session.query(Tranch).filter(Tranch.id == tranch_id).first()
 
-    expiry_date = datetime.now(tz=None).replace(day=28) + timedelta(days=4)
-    expiry_date = expiry_date - timedelta(days=expiry_date.day)
+    if tranch is None:
+        raise ResourceNotFoundError(f"No tranch found with {tranch_id}=", Tranch)
+
+    all_borrs = db_session.query(Borrower).filter(Borrower.tranch_id == tranch_id)
+
+    client = db_session.query(Client).filter(Client.id == tranch.client_id).first()
+
+    if client is None:
+        raise ResourceNotFoundError(f"No client found for {tranch_id=}")
+
+    expiry_date = _get_end_of_month()
 
     for each in all_borrs:
-        journey_url = "https://{host}/loan-repay/{canpebid}".format(
-            host=client.domain, canpebid=each.canpebid
-        )
-        hashVal = generateHash(journey_url)
+        journey_url = f"https://{client.domain}/loan-repay/{each.canpebid}"
+        hashVal = _generate_hash(journey_url)
 
-        hash_obj = (
-            db_session.query(model.Hash).filter(model.Hash.hash_key == hashVal).first()
-        )
+        hash_obj = db_session.query(HashKey).filter(HashKey.hash_key == hashVal).first()
+
         if not hash_obj:
-            print("No existing Url found for {}".format(each.opportunity_name))
-            hashObj = Hash(
+            hashObj = HashKey(
                 hash_key=hashVal,
                 original_key=journey_url,
                 tranch_id=tranch_id,
                 creation_date=datetime.now(tz=None),
                 expiry_date=expiry_date,
             )
-            # each.sms_short_link = "https://api-staging.icanpe.com/short-url/{}".format(hashVal)
-            each.sms_short_link = "https://api.icanpe.com/{}".format(hashVal)
+            each.sms_short_link = f"https://api.icanpe.com/{hashVal}"
 
-            print(each.sms_short_link)
+            logger.info(
+                f"Generated new url for {each.opportunity_name}: {each.sms_short_link}"
+            )
+
             db_session.add(hashObj)
-            db_session.flush()
 
         else:
-            print(
-                "existing Url found for {} - {}".format(
-                    each.opportunity_name, each.sms_short_link
-                )
+            each.sms_short_link = f"https://api.icanpe.com/{hashVal}"
+            logger.info(
+                f"Existing url found for {each.opportunity_name}: {each.sms_short_link}"
             )
 
     db_session.commit()
