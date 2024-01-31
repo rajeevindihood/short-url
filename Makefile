@@ -1,7 +1,7 @@
 .PHONY: start test
 
 watch:
-	uvicorn app.main:app --host 0.0.0.0 --port 8010 --env-file app/local.env --log-level info --reload
+	uvicorn app.main:app --host 0.0.0.0 --port 8017 --env-file app/local.env --log-level info --reload
 
 
 test:

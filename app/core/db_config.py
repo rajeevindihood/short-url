@@ -1,51 +1,27 @@
-import os
-from logging import getLogger
-from threading import Lock
-
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import URL, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio.session import async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 
-from app.core.singleton_pattern import singleton
-
-logger = getLogger(__name__)
-
-
-@singleton
-class Counter:
-    def __init__(self) -> None:
-        self.lock = Lock()
-        self.counter = 0
-
-    def increment(self):
-        self.lock.acquire()
-        self.counter += 1
-        self.lock.release()
-        return self.counter
-
-
-DATABASE_TYPE = os.getenv("DATABASE_TYPE", None)
-DATABASE_USER = os.getenv("DATABASE_USER", None)
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD", None)
-DATABASE_HOST = os.getenv("DATABASE_HOST", None)
-DATABASE_PORT = os.getenv("DATABASE_PORT", None)
-DATABASE_NAME = os.getenv("DATABASE_NAME", None)
+from .config import ENV
 
 DATABASE_URL = "postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}".format(
-    DATABASE_USER=DATABASE_USER,
-    DATABASE_PASSWORD=DATABASE_PASSWORD,
-    DATABASE_HOST=DATABASE_HOST,
-    DATABASE_PORT=DATABASE_PORT,
-    DATABASE_NAME=DATABASE_NAME,
+    DATABASE_USER=ENV.DATABASE_USER,
+    DATABASE_PASSWORD=ENV.DATABASE_PASSWORD.get_secret_value(),
+    DATABASE_HOST=ENV.DATABASE_HOST,
+    DATABASE_PORT=ENV.DATABASE_PORT,
+    DATABASE_NAME=ENV.DATABASE_NAME,
 )
-logger.info("Connecting to database:{}".format(DATABASE_URL))
-DATABASE_URL2 = "postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}".format(
-    DATABASE_USER=DATABASE_USER,
-    DATABASE_PASSWORD=DATABASE_PASSWORD,
-    DATABASE_HOST=DATABASE_HOST,
-    DATABASE_PORT=DATABASE_PORT,
-    DATABASE_NAME=DATABASE_NAME,
+
+SQLA_ASYNC_DB_URL = URL.create(
+    "postgresql+asyncpg",
+    username=ENV.DATABASE_USER,
+    password=ENV.DATABASE_PASSWORD.get_secret_value(),
+    host=ENV.DATABASE_HOST,
+    port=int(ENV.DATABASE_PORT),
+    database=ENV.DATABASE_NAME,
 )
+
 engine = create_engine(
     DATABASE_URL,
     pool_recycle=3600,
@@ -53,18 +29,32 @@ engine = create_engine(
     max_overflow=20,
     connect_args={"options": "-c timezone=Asia/Calcutta"},
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+async_engine = create_async_engine(
+    SQLA_ASYNC_DB_URL,
+    pool_recycle=3600,
+    pool_size=20,
+    max_overflow=20,
+)
+
+DbSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+AsyncDbSession = async_sessionmaker(
+    autocommit=False, autoflush=False, expire_on_commit=False, bind=async_engine
+)
 
 
 # Dependency injection method
 def get_db():
+    db = None
     try:
-        counter = Counter().increment()
-        logger.info("Allocated db conneciton for request:{}".format(counter))
-        db = SessionLocal()
+        db = DbSession()
         yield db
     finally:
-        logger.info("De-Allocated db conneciton for request:{}".format(counter))
-        db.close()
+        if db is not None:
+            db.close()
+
+
+async def get_async_db():
+    async with AsyncDbSession() as session:
+        yield session
