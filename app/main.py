@@ -1,13 +1,14 @@
 import logging
-
 import os
 import time
 
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.hash.router import router as hashRouter
+from app.core.errors import GenericError
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,15 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     response.headers["Server-Timing"] = f"total;dur={process_time*1000}"
     return response
+
+
+@app.exception_handler(GenericError)
+async def generic_error_handler(request: Request, exc: GenericError):
+    status, code, message, data = exc.get_error_params()
+    return JSONResponse(
+        status_code=status,
+        content={"detail": {"code": code, "message": message, "data": data}},
+    )
 
 
 app.include_router(hashRouter)
