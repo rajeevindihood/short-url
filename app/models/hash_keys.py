@@ -26,10 +26,10 @@ class HashKey(Base):
     id: Mapped[IntPK]
     original_key: Mapped[str] = mapped_column(String(255))
     hash_key: Mapped[str] = mapped_column(String(8))
-    creation_date: Mapped[Optional[datetime]] = mapped_column(DateTime())
+    creation_date: Mapped[Optional[datetime]] = mapped_column(DateTime())  # IST
     tranch_id: Mapped[Optional[int]] = mapped_column(ForeignKey("journey_tranch.id"))
-    last_visiting_time: Mapped[Optional[datetime]] = mapped_column(DateTime())
+    last_visiting_time: Mapped[Optional[datetime]] = mapped_column(DateTime())  # IST
     is_enabled: Mapped[Optional[bool]] = mapped_column(
         Boolean(), server_default=expression.true()
     )
-    expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime())
+    expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime())  # IST

@@ -2,6 +2,7 @@ import hashlib
 import os
 from datetime import datetime, timedelta
 from logging import getLogger
+from typing import Optional
 
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import RedirectResponse
@@ -71,9 +72,16 @@ def redirect_to_original_url(hash: str, db_session: Session = Depends(get_db)):
 
 
 @router.post("/create-short-url")
-def save_url(url: str = Body(..., embed=True), db_session: Session = Depends(get_db)):
+def save_url(
+    url: str = Body(..., embed=True),
+    expiry_date: Optional[datetime] = Body(None, embed=True),  # IST
+    db_session: Session = Depends(get_db),
+):
     hash_key = _generate_hash(url)
-    expiry_date = _get_end_of_month()
+
+    if not expiry_date:
+        expiry_date = _get_end_of_month()
+
     obj = HashKey(
         hash_key=hash_key,
         original_key=url,
