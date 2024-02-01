@@ -2,13 +2,14 @@ import hashlib
 import os
 from datetime import datetime, timedelta
 from logging import getLogger
-from random import random
+from random import randint
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound, IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
 from app.core.constants import TZ_IST
@@ -21,6 +22,17 @@ app_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 logger = getLogger(__file__)
 router = APIRouter(tags=["Hash"])
+
+
+class HashKeyResponse(BaseModel):
+    url: str
+    slug: str
+    original_key: str
+    creation_date: Optional[datetime]
+    expiry_date: Optional[datetime]
+
+    class Config:
+        from_attributes = True
 
 
 def _generate_hash(s, char_length=8):
@@ -80,7 +92,7 @@ def save_url(
     db_session: Session = Depends(get_db),
 ):
     if add_salt:
-        value = url + f"{random()}"
+        value = url + f"{randint(0, 999999)}"
     else:
         value = url
 
@@ -102,7 +114,13 @@ def save_url(
     except IntegrityError as e:
         raise DuplicateDataError(f"Duplicate entry for {url=}", e)
 
-    return obj.hash_key
+    return HashKeyResponse(
+        url=f"https://api.icanpe.com/{obj.hash_key}",
+        slug=obj.hash_key,
+        original_key=obj.original_key,
+        creation_date=obj.creation_date,
+        expiry_date=obj.expiry_date,
+    )
 
 
 # TODO: Deprecate
